@@ -133,85 +133,103 @@ class ShoppingStore: ObservableObject {
 struct ContentView: View {
     @StateObject var store = ShoppingStore()
     @State private var showingAddSheet = false
-    
+    @State private var showSplash = true   // NEW
+   
     var body: some View {
-        TabView {
-            // 1. LIST TAB
-            NavigationView {
-                ZStack(alignment: .bottomTrailing) {
-                    List {
-                        ForEach(store.categories) { category in
-                            let items = store.currentItems.filter { $0.categoryId == category.id }
-                            if !items.isEmpty {
-                                Section(header: CategoryHeader(category: category, items: items, store: store)) {
-                                    ForEach(items) { item in
-                                        ItemRow(item: item, store: store)
-                                    }
-                                    .onDelete { indexSet in
-                                        store.deleteItem(at: indexSet, in: category.id)
+       
+        ZStack {
+           
+            // MAIN APP
+            TabView {
+                // 1. LIST TAB
+                NavigationView {
+                    ZStack(alignment: .bottomTrailing) {
+                        List {
+                            ForEach(store.categories) { category in
+                                let items = store.currentItems.filter { $0.categoryId == category.id }
+                                if !items.isEmpty {
+                                    Section(header: CategoryHeader(category: category, items: items, store: store)) {
+                                        ForEach(items) { item in
+                                            ItemRow(item: item, store: store)
+                                        }
+                                        .onDelete { indexSet in
+                                            store.deleteItem(at: indexSet, in: category.id)
+                                        }
                                     }
                                 }
                             }
                         }
+                        .listStyle(InsetGroupedListStyle())
+                        .navigationTitle("Shopping List")
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                Button("Finish") { store.finishList() }
+                                    .disabled(store.currentItems.isEmpty)
+                            }
+                        }
+                       
+                        Button(action: { showingAddSheet = true }) {
+                            Image(systemName: "plus")
+                                .font(.title.weight(.semibold))
+                                .padding()
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .clipShape(Circle())
+                                .shadow(radius: 4, x: 0, y: 4)
+                        }
+                        .padding()
                     }
-                    .listStyle(InsetGroupedListStyle())
-                    .navigationTitle("Shopping List")
+                }
+                .tabItem {
+                    Label("List", systemImage: "list.bullet")
+                }
+               
+                // 2. RECEIPT TAB
+                ReceiptView(store: store)
+                    .tabItem {
+                        Label("Receipt", systemImage: "doc.text")
+                    }
+               
+                // 3. HISTORY TAB
+                NavigationView {
+                    List {
+                        ForEach(store.history) { list in
+                            VStack(alignment: .leading) {
+                                Text(list.date, style: .date)
+                                    .font(.headline)
+                                Text("Total: $\(String(format: "%.2f", list.total))")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        .onDelete { indexSet in
+                            store.history.remove(atOffsets: indexSet)
+                            store.saveData()
+                        }
+                    }
+                    .navigationTitle("History")
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Finish") { store.finishList() }
-                                .disabled(store.currentItems.isEmpty)
+                            Button("Clear") { store.clearHistory() }
                         }
                     }
-                    
-                    // Floating Action Button
-                    Button(action: { showingAddSheet = true }) {
-                        Image(systemName: "plus")
-                            .font(.title.weight(.semibold))
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .clipShape(Circle())
-                            .shadow(radius: 4, x: 0, y: 4)
-                    }
-                    .padding()
                 }
-            }
-            .tabItem {
-                Label("List", systemImage: "list.bullet")
-            }
-            
-            // 2. RECEIPT TAB
-            ReceiptView(store: store)
                 .tabItem {
-                    Label("Receipt", systemImage: "doc.text")
-                }
-            
-            // 3. HISTORY TAB
-            NavigationView {
-                List {
-                    ForEach(store.history) { list in
-                        VStack(alignment: .leading) {
-                            Text(list.date, style: .date)
-                                .font(.headline)
-                            Text("Total: $\(String(format: "%.2f", list.total))")
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
-                        }
-                    }
-                    .onDelete { indexSet in
-                        store.history.remove(atOffsets: indexSet)
-                        store.saveData()
-                    }
-                }
-                .navigationTitle("History")
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Clear") { store.clearHistory() }
-                    }
+                    Label("History", systemImage: "clock")
                 }
             }
-            .tabItem {
-                Label("History", systemImage: "clock")
+           
+            // SPLASH SCREEN
+            if showSplash {
+                SplashView()
+                    .transition(.opacity)
+            }
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) { //splash sscreen last 10 seconds
+                withAnimation {
+                    showSplash = false
+                }
             }
         }
         .sheet(isPresented: $showingAddSheet) {
@@ -219,6 +237,7 @@ struct ContentView: View {
         }
     }
 }
+
 
 // MARK: - SUBVIEWS
 
@@ -490,3 +509,62 @@ struct ReceiptView: View {
         }
     }
 }
+
+struct SplashView: View {
+   
+    @State private var scale = 0.8
+   
+    var body: some View {
+        ZStack {
+           
+            Color.blue
+                .ignoresSafeArea()
+           
+            VStack(spacing: 20) {
+               
+                Image(systemName: "cart.fill")
+                    .font(.system(size: 80))
+                    .foregroundColor(.white)
+                    .scaleEffect(scale)
+               
+                Text("Shopping List App")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+               
+                VStack(spacing: 4) {
+                   
+                    Text("Sabannah De-Gale")
+                    Text("101487100")
+                    Text("Section: 50488")
+                   
+                    Text("")
+                   
+                    Text("Vu Anh Quan (Bill) Tran")
+                    Text("101513060")
+                    Text("Section: 50488")
+                   
+                    Text("")
+                   
+                    Text("Omoruyi Oredia")
+                    Text("101496942")
+                    Text("Section: 54621")
+                   
+                }
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.9))
+                .multilineTextAlignment(.center)
+               
+                ProgressView()
+                    .tint(.white)
+                    .padding(.top, 10)
+            }
+        }
+        .onAppear {
+            withAnimation(.easeIn(duration: 1.5)) {
+                scale = 1.0
+            }
+        }
+    }
+}
+
