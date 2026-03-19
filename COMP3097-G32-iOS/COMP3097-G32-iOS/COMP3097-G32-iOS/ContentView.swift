@@ -301,28 +301,40 @@ struct CategoryHeader: View {
     let category: Category
     let items: [Product]
     let store: ShoppingStore
-    
+   
     var total: Double {
         items.reduce(0) { $0 + ($1.price * Double($1.quantity)) }
     }
-    
+   
     var body: some View {
         HStack {
             Text(category.name)
                 .font(.headline)
                 .foregroundColor(.white)
+
             Spacer()
+
             Text("$\(String(format: "%.2f", total))")
                 .font(.subheadline)
                 .bold()
                 .foregroundColor(.white.opacity(0.9))
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, -4)
-        .listRowInsets(EdgeInsets())
-        .background(store.getColor(name: category.colorName))
-    }
+        .padding()
+        .background(
+            LinearGradient(
+                colors: [
+                    store.getColor(name: category.colorName),
+                    store.getColor(name: category.colorName).opacity(0.7)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .padding(.horizontal)
+        .padding(.top, 8)    }
 }
+
 
 struct ItemRow: View {
     let item: Product
