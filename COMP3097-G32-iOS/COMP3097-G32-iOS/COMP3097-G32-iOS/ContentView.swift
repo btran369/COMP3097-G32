@@ -23,6 +23,7 @@ struct Product: Identifiable, Codable {
     var price: Double
     var quantity: Int
     var completed: Bool
+    var imageName: String?   // NEW
 }
 
 struct ShoppingList: Identifiable, Codable {
@@ -42,7 +43,6 @@ class ShoppingStore: ObservableObject {
     init() {
         loadData()
         if categories.isEmpty {
-            // Defaults
             categories = [
                 Category(id: UUID().uuidString, name: "Food", colorName: "purple", taxRate: 0.0),
                 Category(id: UUID().uuidString, name: "Medication", colorName: "blue", taxRate: 0.0),
@@ -54,7 +54,18 @@ class ShoppingStore: ObservableObject {
     
     // Actions
     func addItem(name: String, price: Double, quantity: Int, categoryId: String) {
-        let newItem = Product(id: UUID().uuidString, name: name, categoryId: categoryId, price: price, quantity: quantity, completed: false)
+        let detectedImage = imageNameForProduct(named: name)
+        
+        let newItem = Product(
+            id: UUID().uuidString,
+            name: name,
+            categoryId: categoryId,
+            price: price,
+            quantity: quantity,
+            completed: false,
+            imageName: detectedImage
+        )
+        
         currentItems.append(newItem)
         saveData()
     }
@@ -67,10 +78,11 @@ class ShoppingStore: ObservableObject {
     }
     
     func deleteItem(at offsets: IndexSet, in categoryId: String) {
-        // Complex delete logic because of grouped view
         let categoryItems = currentItems.filter { $0.categoryId == categoryId }
         let itemsToDelete = offsets.map { categoryItems[$0] }
-        currentItems.removeAll { item in itemsToDelete.contains(where: { $0.id == item.id }) }
+        currentItems.removeAll { item in
+            itemsToDelete.contains(where: { $0.id == item.id })
+        }
         saveData()
     }
     
@@ -92,7 +104,14 @@ class ShoppingStore: ObservableObject {
             }
         }
         
-        let list = ShoppingList(id: UUID().uuidString, date: Date(), items: currentItems, total: subtotal + taxTotal, tax: taxTotal)
+        let list = ShoppingList(
+            id: UUID().uuidString,
+            date: Date(),
+            items: currentItems,
+            total: subtotal + taxTotal,
+            tax: taxTotal
+        )
+        
         history.insert(list, at: 0)
         currentItems.removeAll()
         saveData()
@@ -105,15 +124,32 @@ class ShoppingStore: ObservableObject {
     
     // Persistence
     func saveData() {
-        if let encoded = try? JSONEncoder().encode(currentItems) { UserDefaults.standard.set(encoded, forKey: "currentItems") }
-        if let encoded = try? JSONEncoder().encode(categories) { UserDefaults.standard.set(encoded, forKey: "categories") }
-        if let encoded = try? JSONEncoder().encode(history) { UserDefaults.standard.set(encoded, forKey: "history") }
+        if let encoded = try? JSONEncoder().encode(currentItems) {
+            UserDefaults.standard.set(encoded, forKey: "currentItems")
+        }
+        if let encoded = try? JSONEncoder().encode(categories) {
+            UserDefaults.standard.set(encoded, forKey: "categories")
+        }
+        if let encoded = try? JSONEncoder().encode(history) {
+            UserDefaults.standard.set(encoded, forKey: "history")
+        }
     }
     
     func loadData() {
-        if let data = UserDefaults.standard.data(forKey: "currentItems"), let decoded = try? JSONDecoder().decode([Product].self, from: data) { currentItems = decoded }
-        if let data = UserDefaults.standard.data(forKey: "categories"), let decoded = try? JSONDecoder().decode([Category].self, from: data) { categories = decoded }
-        if let data = UserDefaults.standard.data(forKey: "history"), let decoded = try? JSONDecoder().decode([ShoppingList].self, from: data) { history = decoded }
+        if let data = UserDefaults.standard.data(forKey: "currentItems"),
+           let decoded = try? JSONDecoder().decode([Product].self, from: data) {
+            currentItems = decoded
+        }
+        
+        if let data = UserDefaults.standard.data(forKey: "categories"),
+           let decoded = try? JSONDecoder().decode([Category].self, from: data) {
+            categories = decoded
+        }
+        
+        if let data = UserDefaults.standard.data(forKey: "history"),
+           let decoded = try? JSONDecoder().decode([ShoppingList].self, from: data) {
+            history = decoded
+        }
     }
     
     // Helpers
@@ -127,19 +163,41 @@ class ShoppingStore: ObservableObject {
         default: return .gray
         }
     }
+    
+    // NEW: auto-match product names to asset names
+    func imageNameForProduct(named productName: String) -> String {
+        let lower = productName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if lower.contains("milk") {
+            return "milk"
+        } else if lower.contains("egg") {
+            return "eggs"
+        } else if lower.contains("bread") {
+            return "bread"
+        } else if lower.contains("celery") {
+            return "celery"
+        } else if lower.contains("apple") {
+            return "apple"
+        } else if lower.contains("banana") {
+            return "banana"
+        } else if lower.contains("cheese") {
+            return "cheese"
+        } else if lower.contains("carrot") {
+            return "carrot"
+        } else {
+            return "default_product"
+        }
+    }
 }
 
 // MARK: - MAIN APP VIEW
 struct ContentView: View {
     @StateObject var store = ShoppingStore()
     @State private var showingAddSheet = false
-    @State private var showSplash = true   // NEW
+    @State private var showSplash = true
    
     var body: some View {
-       
         ZStack {
-           
-            // MAIN APP
             TabView {
                 // 1. LIST TAB
                 NavigationView {
@@ -219,14 +277,13 @@ struct ContentView: View {
                 }
             }
            
-            // SPLASH SCREEN
             if showSplash {
                 SplashView()
                     .transition(.opacity)
             }
         }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 10) { //splash sscreen last 10 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
                 withAnimation {
                     showSplash = false
                 }
@@ -237,7 +294,6 @@ struct ContentView: View {
         }
     }
 }
-
 
 // MARK: - SUBVIEWS
 
@@ -273,7 +329,18 @@ struct ItemRow: View {
     let store: ShoppingStore
     
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
+            // NEW: product image
+            Image(item.imageName ?? "default_product")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 50, height: 50)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                )
+            
             Button(action: { store.toggleItem(item.id) }) {
                 Image(systemName: item.completed ? "checkmark.circle.fill" : "circle")
                     .foregroundColor(item.completed ? .green : .gray)
@@ -284,6 +351,7 @@ struct ItemRow: View {
                 Text(item.name)
                     .strikethrough(item.completed)
                     .foregroundColor(item.completed ? .gray : .primary)
+                
                 Text("\(item.quantity) x $\(String(format: "%.2f", item.price))")
                     .font(.caption)
                     .foregroundColor(.gray)
@@ -294,6 +362,7 @@ struct ItemRow: View {
             Text("$\(String(format: "%.2f", item.price * Double(item.quantity)))")
                 .bold()
         }
+        .padding(.vertical, 4)
     }
 }
 
@@ -306,14 +375,29 @@ struct AddItemView: View {
     @State private var quantity = "1"
     @State private var selectedCategory = ""
     
-    // For new category
     @State private var showingNewGroup = false
     @State private var newGroupName = ""
     @State private var newGroupTax = ""
     
+    var previewImageName: String {
+        store.imageNameForProduct(named: name.isEmpty ? "default" : name)
+    }
+    
     var body: some View {
         NavigationView {
             Form {
+                Section(header: Text("Item Preview")) {
+                    HStack {
+                        Spacer()
+                        Image(previewImageName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 90, height: 90)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        Spacer()
+                    }
+                }
+                
                 Section(header: Text("Item Details")) {
                     TextField("Name (e.g. Milk)", text: $name)
                     TextField("Price", text: $price)
@@ -351,7 +435,6 @@ struct AddItemView: View {
                 
                 Button("Add Item") {
                     if let p = Double(price), let q = Int(quantity), !name.isEmpty {
-                        // Default to first category if none selected
                         let catId = selectedCategory.isEmpty ? store.categories.first?.id ?? "" : selectedCategory
                         store.addItem(name: name, price: p, quantity: q, categoryId: catId)
                         isPresented = false
@@ -423,7 +506,6 @@ struct ReceiptView: View {
             Color(UIColor.systemGray6).ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Header
                 VStack {
                     Text("RECEIPT")
                         .font(.largeTitle)
@@ -435,7 +517,6 @@ struct ReceiptView: View {
                 .padding()
                 .background(Color.black)
                 
-                // Body
                 VStack(spacing: 16) {
                     Text(Date(), style: .date)
                         .font(.caption)
@@ -446,7 +527,13 @@ struct ReceiptView: View {
                         Text("No items yet").italic().foregroundColor(.gray)
                     } else {
                         ForEach(store.currentItems) { item in
-                            HStack {
+                            HStack(spacing: 10) {
+                                Image(item.imageName ?? "default_product")
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 28, height: 28)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                                
                                 Text("\(item.quantity) x \(item.name)")
                                 Spacer()
                                 Text("$\(String(format: "%.2f", item.price * Double(item.quantity)))")
@@ -489,7 +576,6 @@ struct ReceiptView: View {
                         .fontDesign(.monospaced)
                     }
                     
-                    // Barcode placeholder
                     HStack(spacing: 2) {
                         ForEach(0..<20) { _ in
                             Rectangle()
@@ -511,17 +597,14 @@ struct ReceiptView: View {
 }
 
 struct SplashView: View {
-   
     @State private var scale = 0.8
    
     var body: some View {
         ZStack {
-           
             Color.blue
                 .ignoresSafeArea()
            
             VStack(spacing: 20) {
-               
                 Image(systemName: "cart.fill")
                     .font(.system(size: 80))
                     .foregroundColor(.white)
@@ -533,7 +616,6 @@ struct SplashView: View {
                     .foregroundColor(.white)
                
                 VStack(spacing: 4) {
-                   
                     Text("Sabannah De-Gale")
                     Text("101487100")
                     Text("Section: 50488")
@@ -549,7 +631,6 @@ struct SplashView: View {
                     Text("Omoruyi Oredia")
                     Text("101496942")
                     Text("Section: 54621")
-                   
                 }
                 .font(.caption)
                 .foregroundColor(.white.opacity(0.9))
@@ -567,4 +648,3 @@ struct SplashView: View {
         }
     }
 }
-
