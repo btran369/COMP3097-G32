@@ -164,7 +164,7 @@ class ShoppingStore: ObservableObject {
         }
     }
     
-    // NEW: auto-match product names to asset names
+    // Auto-match product names to asset names
     func imageNameForProduct(named productName: String) -> String {
         let lower = productName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         
