@@ -195,6 +195,29 @@ struct ContentView: View {
     @StateObject var store = ShoppingStore()
     @State private var showingAddSheet = false
     @State private var showSplash = true
+    
+    init() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor.white
+
+        // Selected tab item
+        appearance.stackedLayoutAppearance.selected.iconColor = .black
+        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
+            .foregroundColor: UIColor.black
+        ]
+
+        appearance.stackedLayoutAppearance.normal.iconColor = .darkGray
+        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
+            .foregroundColor: UIColor.darkGray
+        ]
+
+        UITabBar.appearance().standardAppearance = appearance
+
+        if #available(iOS 15.0, *) {
+            UITabBar.appearance().scrollEdgeAppearance = appearance
+        }
+    }
    
     var body: some View {
         ZStack {
