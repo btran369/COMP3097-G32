@@ -12,7 +12,9 @@ import Combine
 struct Category: Identifiable, Codable, Hashable {
     var id: String
     var name: String
-    var colorName: String // "purple", "blue", etc.
+    var red: Double
+    var green: Double
+    var blue: Double
     var taxRate: Double
 }
 
@@ -44,10 +46,10 @@ class ShoppingStore: ObservableObject {
         loadData()
         if categories.isEmpty {
             categories = [
-                Category(id: UUID().uuidString, name: "Food", colorName: "purple", taxRate: 0.0),
-                Category(id: UUID().uuidString, name: "Medication", colorName: "blue", taxRate: 0.0),
-                Category(id: UUID().uuidString, name: "Cleaning", colorName: "green", taxRate: 8.875),
-                Category(id: UUID().uuidString, name: "Other", colorName: "gray", taxRate: 8.875)
+                Category(id: UUID().uuidString, name: "Food", red: 0.5, green: 0.0, blue: 0.5, taxRate: 0.0),
+                Category(id: UUID().uuidString, name: "Medication", red: 0.0, green: 0.0, blue: 1.0, taxRate: 0.0),
+                Category(id: UUID().uuidString, name: "Cleaning", red: 0.0, green: 1.0, blue: 0.0, taxRate: 8.875),
+                Category(id: UUID().uuidString, name: "Other", red: 0.5, green: 0.5, blue: 0.5, taxRate: 8.875)
             ]
         }
     }
@@ -86,8 +88,15 @@ class ShoppingStore: ObservableObject {
         saveData()
     }
     
-    func addCategory(name: String, tax: Double, color: String) {
-        let newCat = Category(id: UUID().uuidString, name: name, colorName: color, taxRate: tax)
+    func addCategory(name: String, tax: Double, red: Double, green: Double, blue: Double) {
+        let newCat = Category(
+            id: UUID().uuidString,
+            name: name,
+            red: red,
+            green: green,
+            blue: blue,
+            taxRate: tax
+        )
         categories.append(newCat)
         saveData()
     }
@@ -153,15 +162,12 @@ class ShoppingStore: ObservableObject {
     }
     
     // Helpers
-    func getColor(name: String) -> Color {
-        switch name {
-        case "purple": return .purple
-        case "blue": return .blue
-        case "green": return .green
-        case "orange": return .orange
-        case "red": return .red
-        default: return .gray
-        }
+    func getColor(category: Category) -> Color {
+        return Color(
+            red: category.red,
+            green: category.green,
+            blue: category.blue
+        )
     }
     
     // Auto-match product names to asset names
@@ -346,8 +352,8 @@ struct CategoryHeader: View {
         .background(
             LinearGradient(
                 colors: [
-                    store.getColor(name: category.colorName),
-                    store.getColor(name: category.colorName).opacity(0.7)
+                    store.getColor(category: category),
+                    store.getColor(category: category).opacity(0.7)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -405,6 +411,10 @@ struct AddItemView: View {
     @ObservedObject var store: ShoppingStore
     @Binding var isPresented: Bool
     
+    @State private var red: Double = 0.5
+    @State private var green: Double = 0.5
+    @State private var blue: Double = 0.5
+    
     @State private var name = ""
     @State private var price = ""
     @State private var quantity = "1"
@@ -452,18 +462,37 @@ struct AddItemView: View {
                     Button("Add New Group") { showingNewGroup = true }
                 }
                 
+
+                
                 if showingNewGroup {
                     Section(header: Text("New Group Details")) {
                         TextField("Group Name", text: $newGroupName)
                         TextField("Tax Rate %", text: $newGroupTax)
                             .keyboardType(.decimalPad)
-                        Button("Save Group") {
-                            if let tax = Double(newGroupTax), !newGroupName.isEmpty {
-                                store.addCategory(name: newGroupName, tax: tax, color: "orange")
-                                showingNewGroup = false
-                                newGroupName = ""
-                                newGroupTax = ""
-                            }
+                    }
+
+                    Section(header: Text("Pick Color")) {
+                        Color(red: red, green: green, blue: blue)
+                            .frame(height: 50)
+                            .cornerRadius(10)
+
+                        Slider(value: $red, in: 0...1) { Text("Red") }
+                        Slider(value: $green, in: 0...1) { Text("Green") }
+                        Slider(value: $blue, in: 0...1) { Text("Blue") }
+                    }
+
+                    Button("Save Group") {
+                        if let tax = Double(newGroupTax), !newGroupName.isEmpty {
+                            store.addCategory(
+                                name: newGroupName,
+                                tax: tax,
+                                red: red,
+                                green: green,
+                                blue: blue
+                            )
+                            showingNewGroup = false
+                            newGroupName = ""
+                            newGroupTax = ""
                         }
                     }
                 }
