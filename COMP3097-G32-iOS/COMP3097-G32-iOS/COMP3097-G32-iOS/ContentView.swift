@@ -4,7 +4,9 @@
 //
 //  Updated: Added PhotosPicker (camera roll permission), SwiftData database,
 //           and full History Detail View showing every saved item.
-//
+//Sabannah De-Gale 101487100
+//Vu Anh Quan (Bill) Tran 101513060
+//Omoruyi Oredia 101496942
 
 import SwiftUI
 import Combine
@@ -131,7 +133,8 @@ class ShoppingStore: ObservableObject {
     }
     
     // MARK: Actions
-    
+    //Omoruyi Oredia 101496942: history
+    //Vu Anh Quan (Bill) Tran 101513060: database
     func addItem(name: String, price: Double, quantity: Int,
                  categoryId: String, imageData: Data?) {
         let assetName = imageData == nil ? imageNameForProduct(named: name) : nil
@@ -314,6 +317,7 @@ class ShoppingStore: ObservableObject {
         Color(red: category.red, green: category.green, blue: category.blue)
     }
     
+    //Vu Anh Quan (Bill) Tran 101513060: image shows when typing
     func imageNameForProduct(named productName: String) -> String {
         let lower = productName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         if lower.contains("milk")   { return "milk" }
@@ -662,7 +666,8 @@ struct AddItemView: View {
     // Photo picker state
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var customImageData: Data? = nil
-    
+
+    //Sabannah De-Gale 101487100: colour picker 
     // New group state
     @State private var showingNewGroup = false
     @State private var newGroupName = ""
@@ -688,6 +693,7 @@ struct AddItemView: View {
                     }
                     .padding(.vertical, 4)
                     
+                    //Sabannah De-Gale 101487100: colour picker 
                     // PhotosPicker — requests photo library access automatically
                     PhotosPicker(
                         selection: $selectedPhotoItem,
@@ -734,7 +740,8 @@ struct AddItemView: View {
                     }
                     Button("Add New Group") { showingNewGroup = true }
                 }
-                
+
+                //Sabannah De-Gale 101487100: colour picker 
                 if showingNewGroup {
                     Section(header: Text("New Group Details")) {
                         TextField("Group Name", text: $newGroupName)
@@ -820,6 +827,7 @@ struct ReceiptView: View {
     var totalTax: Double { taxes.reduce(0) { $0 + $1.1 } }
     var grandTotal: Double { subtotal + totalTax }
     
+    //Omoruyi Oredia 101496942: fixing ui
     var body: some View {
         ZStack {
             Color(UIColor.systemGray6).ignoresSafeArea()
